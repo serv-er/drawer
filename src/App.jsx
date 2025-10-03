@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import { Canvas } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
 import Cabinet from "./components/Cabinet";
@@ -8,6 +9,7 @@ import DimensionControls from "./components/DimensionControls";
 import CameraControls from "./components/CameraControls";
 import CanvasBackground from "./components/CanvasBackground";
 import BackgroundSelectorUI from "./components/BackgroundSelectorUI";
+import ARApp from "./ARApp";
 
 export default function App() {
   const [width, setWidth] = useState(100);
@@ -29,11 +31,60 @@ export default function App() {
   });
   const [bg, setBg] = useState("black");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showAR, setShowAR] = useState(false);
+
+  // 🔘 Handle AR detection
+  const handleEnterAR = async () => {
+    if (!navigator.xr) {
+      toast.error("❌ WebXR not supported. Try on a mobile device.");
+      return;
+    }
+    const supported = await navigator.xr.isSessionSupported("immersive-ar");
+    if (!supported) {
+      toast.error(
+        "⚠️ AR not available. \n👉 Android: Chrome + ARCore\n👉 iPhone: Safari + ARKit"
+      );
+      return;
+    }
+    setShowAR(true);
+  };
+
+  if (showAR) {
+    return (
+      <ARApp
+        width={width}
+        height={height}
+        depth={depth}
+        numDrawers={numDrawers}
+        modelPos={modelPos}
+        visibility={visibility}
+        textures={textures}
+        bg={bg}
+        setWidth={setWidth}
+        setHeight={setHeight}
+        setDepth={setDepth}
+        setModelPos={setModelPos}
+        setNumDrawers={setNumDrawers}
+        setVisibility={setVisibility}
+        setTextures={setTextures}
+        setBg={setBg}
+        onExit={() => setShowAR(false)}
+      />
+    );
+  }
 
   return (
     <div className="w-screen h-screen relative">
+      {/* ---- AR BUTTON ---- */}
+      <button
+        onClick={handleEnterAR}
+        className="absolute top-4 right-4 z-50 bg-green-600 text-white px-4 py-2 rounded shadow-lg hover:bg-green-700 transition"
+      >
+        View in AR
+      </button>
+
+      {/* ---- 3D CANVAS ---- */}
       <Canvas camera={{ position: [3, 3, 6], fov: 50 }}>
-        {/* Canvas background controlled here */}
         <CanvasBackground bg={bg} />
         {bg === "hdri" && <Environment preset="sunset" />}
         <ambientLight intensity={0.6} />
@@ -50,7 +101,7 @@ export default function App() {
         <CameraControls target={[modelPos.x, modelPos.y, modelPos.z]} />
       </Canvas>
 
-      {/* Desktop Hamburger Menu */}
+      {/* ---- Desktop Hamburger Menu ---- */}
       <div className="hidden md:block">
         <button
           onClick={() => setMenuOpen(true)}
@@ -63,7 +114,10 @@ export default function App() {
             menuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <button onClick={() => setMenuOpen(false)} className="p-2 bg-gray-200 w-full">
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="p-2 bg-gray-200 w-full"
+          >
             Close
           </button>
           <div className="p-4 space-y-4 overflow-y-auto h-full">
@@ -81,29 +135,20 @@ export default function App() {
             />
             <PartControls visibility={visibility} setVisibility={setVisibility} />
             <TextureControls textures={textures} setTextures={setTextures} />
-            {/* Desktop background buttons */}
             <BackgroundSelectorUI bg={bg} setBg={setBg} />
           </div>
         </div>
       </div>
 
-      {/* Mobile Vertical Touch Panel */}
+      {/* ---- Mobile Touch Panels ---- */}
       <div className="md:hidden fixed right-0 top-20 flex flex-col space-y-2 z-50">
         {[
-          { name: "Dimensions", comp: (
-            <DimensionControls
-              width={width}
-              height={height}
-              depth={depth}
-              setWidth={setWidth}
-              setHeight={setHeight}
-              setDepth={setDepth}
-              modelPos={modelPos}
-              setModelPos={setModelPos}
-              numDrawers={numDrawers}
-              setNumDrawers={setNumDrawers}
-            />
-          ) },
+          { name: "Dimensions", comp: <DimensionControls
+              width={width} height={height} depth={depth}
+              setWidth={setWidth} setHeight={setHeight} setDepth={setDepth}
+              modelPos={modelPos} setModelPos={setModelPos}
+              numDrawers={numDrawers} setNumDrawers={setNumDrawers}
+            /> },
           { name: "Parts", comp: <PartControls visibility={visibility} setVisibility={setVisibility} /> },
           { name: "Textures", comp: <TextureControls textures={textures} setTextures={setTextures} /> },
           { name: "Background", comp: <BackgroundSelectorUI bg={bg} setBg={setBg} /> },
@@ -117,14 +162,13 @@ export default function App() {
   );
 }
 
-// Mobile touch panel component
 function MobileTouchPanel({ title, children }) {
   const [open, setOpen] = React.useState(false);
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="w-10 h-10 bg-gray-200 rounded-full text-xs rotate-0 transform transition-all duration-300"
+        className="w-10 h-10 bg-gray-200 rounded-full text-xs"
       >
         {title[0]}
       </button>
