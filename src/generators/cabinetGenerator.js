@@ -1,22 +1,8 @@
-// generators/cabinetGenerator.js
+// src/generators/cabinetGenerator.js (REPLACE with this code)
 import * as THREE from "three";
 
 /**
  * Build a cabinet procedurally from parameters and textures
- *
- * params = {
- *  width, height, depth (in meters),
- *  numDrawers,
- *  handleType ('bar' | 'knob')
- * }
- *
- * textures = {
- *  frame, drawer, handle, leg
- * }
- *
- * visibility = {
- *  frame, drawer, handle, leg
- * }
  */
 export function buildCabinet(params = {}, textures = {}, visibility = {}) {
   const group = new THREE.Group();
@@ -27,21 +13,30 @@ export function buildCabinet(params = {}, textures = {}, visibility = {}) {
   const numDrawers = Math.max(1, params.numDrawers ?? 3);
   const handleType = params.handleType || "bar";
 
-  // Helper: create material
-  const mkMat = (tex, colorHex) => {
-    if (tex instanceof THREE.Texture) {
+  // --- CRITICAL FIX IS HERE ---
+  // This helper function now correctly handles both texture maps AND solid colors.
+  const mkMat = (textureInfo, fallbackColor) => {
+    // If a texture map exists (from file upload), use it.
+    if (textureInfo && textureInfo.map instanceof THREE.Texture) {
+      const tex = textureInfo.map;
       tex.flipY = false;
       tex.encoding = THREE.sRGBEncoding;
       tex.needsUpdate = true;
-      return new THREE.MeshStandardMaterial({ map: tex });
+      return new THREE.MeshStandardMaterial({ map: tex, metalness: 0.1, roughness: 0.8 });
     }
-    return new THREE.MeshStandardMaterial({ color: colorHex || 0x888888 });
+    // Otherwise, use the color from the state.
+    if (textureInfo && textureInfo.color) {
+      return new THREE.MeshStandardMaterial({ color: textureInfo.color, metalness: 0.1, roughness: 0.8 });
+    }
+    // If all else fails, use the hardcoded fallback.
+    return new THREE.MeshStandardMaterial({ color: fallbackColor, metalness: 0.1, roughness: 0.8 });
   };
 
-  const frameMat = mkMat(textures.frame, 0x8b4513);
-  const drawerMat = mkMat(textures.drawer, 0x555555);
-  const handleMat = mkMat(textures.handle, 0x222222);
-  const legMat = mkMat(textures.leg, 0x333333);
+  // Pass the entire texture object (e.g., textures.frame) to the helper
+  const frameMat = mkMat(textures.frame, "#8B4513");
+  const drawerMat = mkMat(textures.drawer, "#555555");
+  const handleMat = mkMat(textures.handle, "#222222");
+  const legMat = mkMat(textures.leg, "#333333");
 
   // Frame
   if (visibility.frame ?? true) {
