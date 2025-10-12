@@ -1,4 +1,4 @@
-// src/App.jsx (REPLACE with this final, corrected code)
+// src/App.jsx (REPLACE with this final, robust code)
 
 import React, { Suspense, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -123,9 +123,20 @@ export default function App(props) {
         </>
       );
     } else {
+      // --- FALLBACK AR WITH ERROR HANDLING ---
       return (
         <div className="w-screen h-screen">
-          <Webcam audio={false} videoConstraints={{ facingMode: "environment" }} className="absolute top-0 left-0 w-full h-full object-cover z-0" />
+          <Webcam
+            audio={false}
+            videoConstraints={{ facingMode: "environment" }}
+            className="absolute top-0 left-0 w-full h-full object-cover z-0"
+            // --- THIS IS THE NEW, CRITICAL PART ---
+            onUserMediaError={(err) => {
+              console.error("Webcam Error:", err);
+              toast.error(`Camera Error: ${err.name}. Please grant camera permissions.`, { duration: 5000 });
+              setShowAR(false); // Go back to the main view on error
+            }}
+          />
           <Canvas gl={{ alpha: true }} camera={{ position: [3, 3, 6], fov: 50 }} className="absolute top-0 left-0 z-10">
             <Scene />
             <OrbitControls target={[props.modelPos.x, props.modelPos.y, props.modelPos.z]} />
@@ -156,8 +167,6 @@ export default function App(props) {
           <div className="p-4 space-y-4 overflow-y-auto h-full pt-12"><AllControls /></div>
         </div>
       </div>
-      {/* --- THIS IS THE FIX --- */}
-      {/* Changed "md-hidden" to the correct "md:hidden" */}
       <div className="md:hidden fixed right-0 top-20 flex flex-col space-y-2 z-50">
           <MobileTouchPanel title="Size"><DimensionControls {...props} /></MobileTouchPanel>
           <MobileTouchPanel title="Parts"><PartControls {...props} /></MobileTouchPanel>
